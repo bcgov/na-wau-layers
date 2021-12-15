@@ -1,1 +1,11 @@
 .Rproj.user
+.Rhistory
+.RData
+internal.R
+*.csv
+out/*
+tmp/*
+data/*
+.*.Rnb.cached
+README.html
+print_ver/*.pdf
