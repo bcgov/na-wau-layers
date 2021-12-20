@@ -13,18 +13,14 @@
 source('header.R')
 source('packages.R')
 
-spatialOutDir <- "out/"
 
 ######################  Load most recent WAU data
 
-wau_analysis <- st_read("data/wshd_w_elements.gpkg", crs=3005) %>%
-  st_cast(to="POLYGON") %>%
-  st_make_valid()
 
 # Load basic watershed info
 
 wau_base <- st_read("data/aqua_sfE.gpkg", crs=3005) %>%
-  st_cast(to="POLYGON") %>%
+  st_cast(to="MULTIPOLYGON") %>%
   st_make_valid()
 
 
@@ -33,6 +29,7 @@ BCr_file <- file.path(spatialOutDir,"BCr.tif")
 if (!file.exists(BCr_file)) {
   BC<-bcmaps::bc_bound_hres(class='sf')
   saveRDS(BC, file='out/BC.rds')
+  bc_stars <- st_as_stars(BC)
   prov_crs <- st_crs(BC)
   ProvRast<-raster(nrows=15744, ncols=17216, xmn=159587.5, xmx=1881187.5,
                    ymn=173787.5, ymx=1748187.5,
@@ -61,7 +58,7 @@ if (!file.exists(BCr_file)) {
 # update file path to new dataset
 layer_file <- file.path("data/old-growth/Map1_PriorityDeferral_2021_10_24.shp")
 out_dir <- file.path("out/old-growth/")
-element <- 'priority-at-risk_old-growth'
+element <- 'priority_old_growth'
 
 load_data <- function(data){
   output<- st_read(data) %>%
@@ -73,19 +70,22 @@ load_data <- function(data){
 
 new_layer <- load_data(layer_file)
 
-write_RDS <- (new_layer, filename = c(out_dir, element))
+saveRDS(new_layer, file = paste0("tmp/", element, '_vect'))
 
 # convert to raster
+new_layer_raster <- fasterize(new_layer, ProvRast, field="raster_value")
+crs(new_layer_raster)<-prov_crs
 
-convert_to_raster<- function(data){
-  output<-fasterize(data, ProvRast, field="raster_value")
-  output
-}
 
-new_layer_raster <- convert_to_raster(new_layer)
+saveRDS(new_layer_raster, file = paste0("tmp/", element, '_rast'))
 
-writeRaster(new_layer_raster, filename())
+write_stars(new_layer_raster, dsn=file.path(paste(out_dir, element, '.tif')), overwrite=TRUE) #not working, not sure why
 
 ##### Raster processing
 
 # Load
+
+
+
+
+
