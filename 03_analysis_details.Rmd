@@ -1,30 +1,1244 @@
 ---
-title: "03_analysis"
+title: "Watershed Assessment Unit Analysis"
 author: "Environmental Reporting BC"
-date: "14/1/2022"
-output: html_document
+date: "17/1/2022"
+output: pdf_document
+toc: true
+toc_depth: 3
+number_sections: true 
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+source('header.R')
+source('packages.R')
+library(stargazer)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r load-and-}
+```{r load gpkg, include=FALSE}
+wau_analysis <- st_read("data/wshd_w_elements.gpkg", crs=3005) %>%
+  st_cast(to="MULTIPOLYGON") %>%
+  st_make_valid() %>%
+  st_drop_geometry()
 
 ```
 
-## Including Plots
+# Introduction
 
-You can also embed plots, for example:
+Notes from Karly:
+The way I have set up this project is that each new layer gets loaded, converted to the right specs (01_load.R) , extracted to WAU (02_clean.R) and then it gets binned (03_analysis.R) and then original WAU layer gets re-written with the new layer. This will create flexibility in whatever layers we add in the future.
+ 
+The hectares from each of our input layers have been extracted into WAUs and were preliminarily binned (these bins should not be used for analysis at this time) . 
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+# Analysis of Land Cover
+Create a log transformation column to test
+Due to data type, most will have skewed right distributions (long right tail)
+I decided to take out the 0's and make them none.
+
+## Fown_protected
+### Layer Description
+
+Sample text
+
+```{r f_own, echo=FALSE, results='asis'}
+wau_working <- wau_analysis %>%
+  mutate(log_fown = ifelse(FOWN_PROTECTED_HA > 0, log(FOWN_PROTECTED_HA), NA))
+
+new_layer_summary <- wau_working %>%
+  filter(FOWN_PROTECTED_HA > 0) %>%
+  summarise(r_mean = signif(mean(FOWN_PROTECTED_HA, 3)),
+            r_med = signif(median(FOWN_PROTECTED_HA, na.rm = TRUE), 3),
+            r_20 = signif(quantile(FOWN_PROTECTED_HA, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(FOWN_PROTECTED_HA, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(FOWN_PROTECTED_HA, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(FOWN_PROTECTED_HA, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(FOWN_PROTECTED_HA, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(FOWN_PROTECTED_HA, na.rm = TRUE), 3), 
+            #indicates this value is half lowest MDL
+            r_max = signif(max(FOWN_PROTECTED_HA, na.rm = TRUE), 3),
+            r_n = length(FOWN_PROTECTED_HA))
+stargazer(new_layer_summary, title = "Forestry Protected Areas Summary", header = F)
+
+new_layer_summary_log<- wau_working %>%
+  summarise(r_mean = signif(mean(log_fown, 3)),
+            r_med = signif(median(log_fown, na.rm = TRUE), 3),
+            r_20 = signif(quantile(log_fown, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(log_fown, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(log_fown, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(log_fown, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(log_fown, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(log_fown, na.rm = TRUE), 3), #indicates this value is half lowest MDL
+            r_max = signif(max(log_fown, na.rm = TRUE), 3),
+            r_n = length(log_fown))
+stargazer(new_layer_summary_log, title = "Forestry Protected Areas Summary (Log Transform)", header = F)
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+### Plots
+
+```{r f_own plots, echo=FALSE, warning=FALSE, results='asis'}
+# hist - raw data
+dist<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=FOWN_PROTECTED_HA), binwidth = 50) + 
+  ggtitle("Histogram - Raw Data")
+dist
+
+# hist - log data
+dist_log<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=log_fown), binwidth = 0.1) + 
+  ggtitle("Histogram - Log Transformed Data")
+dist_log
+
+#qq plot - normality test
+ggqqplot(wau_working$log_fown) +
+    ggtitle("Normality Test")
+
+#normality-test
+ks.test(wau_working$log_fown, "pnorm", sd=sd(wau_working$log_fown))
+```
+
+## Glaciers and Snow
+### Layer Description
+```{r glac log transform, echo=FALSE, results='asis'}
+wau_working <- wau_analysis %>%
+  mutate(log_glac = ifelse(GLACIERS_AND_SNOW_HA > 0, log(GLACIERS_AND_SNOW_HA), NA))
+
+new_layer_summary <- wau_working %>%
+  filter(GLACIERS_AND_SNOW_HA > 0) %>%
+  summarise(r_mean = signif(mean(GLACIERS_AND_SNOW_HA, 3)),
+            r_med = signif(median(GLACIERS_AND_SNOW_HA, na.rm = TRUE), 3),
+            r_20 = signif(quantile(GLACIERS_AND_SNOW_HA, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(GLACIERS_AND_SNOW_HA, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(GLACIERS_AND_SNOW_HA, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(GLACIERS_AND_SNOW_HA, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(GLACIERS_AND_SNOW_HA, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(GLACIERS_AND_SNOW_HA, na.rm = TRUE), 3), 
+            #indicates this value is half lowest MDL
+            r_max = signif(max(GLACIERS_AND_SNOW_HA, na.rm = TRUE), 3),
+            r_n = length(GLACIERS_AND_SNOW_HA))
+stargazer(new_layer_summary, title = "Glacier and Snow Areas Summary", header = F)
+
+new_layer_summary_log<- wau_working %>%
+  summarise(r_mean = signif(mean(log_glac, 3)),
+            r_med = signif(median(log_glac, na.rm = TRUE), 3),
+            r_20 = signif(quantile(log_glac, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(log_glac, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(log_glac, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(log_glac, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(log_glac, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(log_glac, na.rm = TRUE), 3), #indicates this value is half lowest MDL
+            r_max = signif(max(log_glac, na.rm = TRUE), 3),
+            r_n = length(log_glac))
+stargazer(new_layer_summary_log, title = "Glacier and Snow Areas Summary (Log Transform)", header = F)
+```
+
+### Plots
+
+```{r glac plots, echo=FALSE, results='asis'}
+# hist - raw data
+dist<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=GLACIERS_AND_SNOW_HA), binwidth = 50) +
+  ggtitle("Histogram - Raw Data")
+dist
+
+# hist - log data
+dist_log<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=log_glac), binwidth = 0.1) +
+  ggtitle("Histogram - Log Transform")
+dist_log
+
+#qq plot - normality test
+ggqqplot(wau_working$log_glac) +
+  ggtitle("Normality Test")
+
+#normality-test
+ks.test(wau_working$log_glac, "pnorm", sd=sd(wau_working$log_OG))
+```
+
+## Alpine (Nonforest)
+### Layer Description
+```{r alp nonforest log transform, echo=FALSE, results='asis'}
+wau_working <- wau_analysis %>%
+  mutate(log_alp = ifelse(ALPINE_NONFOREST_HA > 0, log(ALPINE_NONFOREST_HA), NA))
+
+new_layer_summary <- wau_working %>%
+  filter(ALPINE_NONFOREST_HA > 0) %>%
+  summarise(r_mean = signif(mean(ALPINE_NONFOREST_HA, 3)),
+            r_med = signif(median(ALPINE_NONFOREST_HA, na.rm = TRUE), 3),
+            r_20 = signif(quantile(ALPINE_NONFOREST_HA, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(ALPINE_NONFOREST_HA, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(ALPINE_NONFOREST_HA, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(ALPINE_NONFOREST_HA, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(ALPINE_NONFOREST_HA, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(ALPINE_NONFOREST_HA, na.rm = TRUE), 3), 
+            #indicates this value is half lowest MDL
+            r_max = signif(max(ALPINE_NONFOREST_HA, na.rm = TRUE), 3),
+            r_n = length(ALPINE_NONFOREST_HA))
+stargazer(new_layer_summary_log, title = "Alpine Nonforested Area Summary", header = F)
+
+new_layer_summary_log<- wau_working %>%
+  summarise(r_mean = signif(mean(log_alp, 3)),
+            r_med = signif(median(log_alp, na.rm = TRUE), 3),
+            r_20 = signif(quantile(log_alp, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(log_alp, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(log_alp, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(log_alp, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(log_alp, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(log_alp, na.rm = TRUE), 3), #indicates this value is half lowest MDL
+            r_max = signif(max(log_alp, na.rm = TRUE), 3),
+            r_n = length(log_alp))
+stargazer(new_layer_summary_log, title = "Alpine Nonforested Area Summary (Log Transform)", header = F)
+
+```
+
+### Plots
+
+```{r alp nonforest plots, echo=FALSE, results='asis'}
+# hist - raw data
+dist<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=ALPINE_NONFOREST_HA), binwidth = 50) + 
+  ggtitle("Histogram - Raw Data")
+dist
+
+# hist - log data
+dist_log<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=log_alp), binwidth = 0.1) +
+  ggtitle("Histogram - Log Transform")
+dist_log
+
+#qq plot - normality test
+ggqqplot(wau_working$log_alp) +
+  ggtitle("Normality Test")
+
+#normality-test
+ks.test(wau_working$log_alp, "pnorm", sd=sd(wau_working$log_alp))
+```
+
+## Alpine/Subalpine/Barren
+### Layer Description
+```{r alp subalp log transform, echo=FALSE, results='asis'}
+wau_working <- wau_analysis %>%
+  mutate(alpbar_perc = round(ALPINE_SUBALPINE_BARREN_HA/ASSESSMENT_UNIT_AREA_HA*100, 2)) %>%
+  mutate(log_alpbar = ifelse(ALPINE_SUBALPINE_BARREN_HA > 0, log(ALPINE_SUBALPINE_BARREN_HA), NA))
+
+new_layer_summary <- wau_working %>%
+  filter(ALPINE_SUBALPINE_BARREN_HA > 0) %>%
+  summarise(r_mean = signif(mean(ALPINE_SUBALPINE_BARREN_HA, 3)),
+            r_med = signif(median(ALPINE_SUBALPINE_BARREN_HA, na.rm = TRUE), 3),
+            r_20 = signif(quantile(ALPINE_SUBALPINE_BARREN_HA, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(ALPINE_SUBALPINE_BARREN_HA, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(ALPINE_SUBALPINE_BARREN_HA, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(ALPINE_SUBALPINE_BARREN_HA, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(ALPINE_SUBALPINE_BARREN_HA, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(ALPINE_SUBALPINE_BARREN_HA, na.rm = TRUE), 3), 
+            #indicates this value is half lowest MDL
+            r_max = signif(max(ALPINE_SUBALPINE_BARREN_HA, na.rm = TRUE), 3),
+            r_n = length(ALPINE_SUBALPINE_BARREN_HA))
+stargazer(new_layer_summary_log, title = "Alpine, Subalpline and Barren Areas Summary (Raw Data)", header = F)
+
+new_layer_summary_log<- wau_working %>%
+  summarise(r_mean = signif(mean(log_alpbar, 3)),
+            r_med = signif(median(log_alpbar, na.rm = TRUE), 3),
+            r_20 = signif(quantile(log_alpbar, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(log_alpbar, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(log_alpbar, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(log_alpbar, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(log_alpbar, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(log_alpbar, na.rm = TRUE), 3), #indicates this value is half lowest MDL
+            r_max = signif(max(log_alpbar, na.rm = TRUE), 3),
+            r_n = length(log_alpbar))
+stargazer(new_layer_summary_log, title = "Alpine, Subalpline and Barren Areas Summary (Log Transform)", header = F)
+
+```
+
+### Plots
+
+```{r alp subalp plots, echo=FALSE, results='asis'}
+# hist - raw data
+dist<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=ALPINE_SUBALPINE_BARREN_HA), binwidth = 50) +
+  ggtitle("Histogram - Raw Data")
+dist
+
+# hist - log data
+dist_log<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=log_alpbar), binwidth = 0.1) +
+  ggtitle("Histogram - Log Transformed Data")
+dist_log
+
+#qq plot - normality test
+ggqqplot(wau_working$log_alpbar) +
+  ggtitle("Normality Test")
+
+#normality-test
+ks.test(wau_working$log_alpbar, "pnorm", sd=sd(wau_working$log_alpbar))
+```
+
+## Forest Land
+### Layer Description
+```{r forest land log transform, echo=FALSE, results='asis'}
+wau_working <- wau_analysis %>%
+  mutate(log_for = ifelse(FOREST_LAND_HA > 0, log(FOREST_LAND_HA), NA))
+
+new_layer_summary <- wau_working %>%
+  filter(FOREST_LAND_HA > 0) %>%
+  summarise(r_mean = signif(mean(FOREST_LAND_HA, 3)),
+            r_med = signif(median(FOREST_LAND_HA, na.rm = TRUE), 3),
+            r_20 = signif(quantile(FOREST_LAND_HA, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(FOREST_LAND_HA, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(FOREST_LAND_HA, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(FOREST_LAND_HA, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(FOREST_LAND_HA, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(FOREST_LAND_HA, na.rm = TRUE), 3), 
+            #indicates this value is half lowest MDL
+            r_max = signif(max(FOREST_LAND_HA, na.rm = TRUE), 3),
+            r_n = length(FOREST_LAND_HA))
+stargazer(new_layer_summary_log, title = "Forested Areas Summary (Raw Data)", header = F)
+
+new_layer_summary_log<- wau_working %>%
+  summarise(r_mean = signif(mean(log_for, 3)),
+            r_med = signif(median(log_for, na.rm = TRUE), 3),
+            r_20 = signif(quantile(log_for, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(log_for, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(log_for, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(log_for, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(log_for, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(log_for, na.rm = TRUE), 3), #indicates this value is half lowest MDL
+            r_max = signif(max(log_for, na.rm = TRUE), 3),
+            r_n = length(log_for))
+stargazer(new_layer_summary_log, title = "Forested Areas Summary (Log Transform)", header = F)
+
+```
+
+### Plots
+
+```{r forest land plots, echo=FALSE, results='asis'}
+# hist - raw data
+dist<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=FOREST_LAND_HA), binwidth = 50) +
+  ggtitle("Histogram - Raw Data")
+dist
+
+# hist - log data
+dist_log<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=log_for), binwidth = 0.1) +
+  ggtitle("Histogram - Log Transform")
+dist_log
+
+#qq plot - normality test
+ggqqplot(wau_working$log_for) +
+  ggtitle("Normality Test")
+
+#normality-test
+ks.test(wau_working$log_for, "pnorm", sd=sd(wau_working$log_for))
+```
+
+## Human Distribution (Current)
+### Layer Description
+```{r hum dist current log transform, echo=FALSE, results='asis'}
+wau_working <- wau_analysis %>%
+  mutate(human_curr_perc = round(DISTRB_HUMAN_CRNT_20YR_HA/ASSESSMENT_UNIT_AREA_HA*100, 2)) %>%
+  mutate(log_human_curr = ifelse(DISTRB_HUMAN_CRNT_20YR_HA > 0, log(DISTRB_HUMAN_CRNT_20YR_HA), NA))
+
+new_layer_summary <- wau_working %>%
+  filter(DISTRB_HUMAN_CRNT_20YR_HA > 0) %>%
+  summarise(r_mean = signif(mean(DISTRB_HUMAN_CRNT_20YR_HA, 3)),
+            r_med = signif(median(DISTRB_HUMAN_CRNT_20YR_HA, na.rm = TRUE), 3),
+            r_20 = signif(quantile(DISTRB_HUMAN_CRNT_20YR_HA, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(DISTRB_HUMAN_CRNT_20YR_HA, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(DISTRB_HUMAN_CRNT_20YR_HA, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(DISTRB_HUMAN_CRNT_20YR_HA, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(DISTRB_HUMAN_CRNT_20YR_HA, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(DISTRB_HUMAN_CRNT_20YR_HA, na.rm = TRUE), 3), 
+            #indicates this value is half lowest MDL
+            r_max = signif(max(DISTRB_HUMAN_CRNT_20YR_HA, na.rm = TRUE), 3),
+            r_n = length(DISTRB_HUMAN_CRNT_20YR_HA))
+stargazer(new_layer_summary_log, title = "Current Human Distribution Summary (Raw Data)", header = F)
+
+new_layer_summary_log<- wau_working %>%
+  summarise(r_mean = signif(mean(log_human_curr, 3)),
+            r_med = signif(median(log_human_curr, na.rm = TRUE), 3),
+            r_20 = signif(quantile(log_human_curr, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(log_human_curr, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(log_human_curr, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(log_human_curr, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(log_human_curr, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(log_human_curr, na.rm = TRUE), 3), 
+            #indicates this value is half lowest MDL
+            r_max = signif(max(log_human_curr, na.rm = TRUE), 3),
+            r_n = length(log_human_curr))
+stargazer(new_layer_summary_log, title = "Current Human Distribution Summary (Log Transform)", 
+          header = F)
+
+```
+
+### Plots
+
+```{r hum dist current plots, echo=FALSE, results='asis'}
+# hist - raw data
+dist<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=DISTRB_HUMAN_CRNT_20YR_HA), binwidth = 50) +
+  ggtitle("Histogram - Raw Data")
+dist
+
+# hist - log data
+dist_log<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=log_human_curr), binwidth = 0.1) +
+  ggtitle("Histogram - Log Transform")
+dist_log
+
+#qq plot - normality test
+ggqqplot(wau_working$log_human_curr) +
+  ggtitle("Normality Test")
+
+#normality-test
+ks.test(wau_working$log_human_curr, "pnorm", sd=sd(wau_working$log_human_curr))
+```
+
+## Human Distribution (Historical)
+### Layer Description
+```{r hum dist hist log transform, echo=FALSE, results='asis'}
+wau_working <- wau_analysis %>%
+  mutate(hum_hist_perc = round(DISTRB_HUMAN_HIST_HA/ASSESSMENT_UNIT_AREA_HA*100, 2)) %>%
+  mutate(log_hum_hist = ifelse(DISTRB_HUMAN_HIST_HA > 0, log(DISTRB_HUMAN_HIST_HA), NA))
+
+new_layer_summary <- wau_working %>%
+  filter(DISTRB_HUMAN_HIST_HA > 0) %>%
+  summarise(r_mean = signif(mean(DISTRB_HUMAN_HIST_HA, 3)),
+            r_med = signif(median(DISTRB_HUMAN_HIST_HA, na.rm = TRUE), 3),
+            r_20 = signif(quantile(DISTRB_HUMAN_HIST_HA, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(DISTRB_HUMAN_HIST_HA, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(DISTRB_HUMAN_HIST_HA, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(DISTRB_HUMAN_HIST_HA, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(DISTRB_HUMAN_HIST_HA, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(DISTRB_HUMAN_HIST_HA, na.rm = TRUE), 3), 
+            #indicates this value is half lowest MDL
+            r_max = signif(max(DISTRB_HUMAN_HIST_HA, na.rm = TRUE), 3),
+            r_n = length(DISTRB_HUMAN_HIST_HA))
+stargazer(new_layer_summary_log, title = "Historic Human Distribution Summary (Raw Data)", header = F)
+
+new_layer_summary_log<- wau_working %>%
+  summarise(r_mean = signif(mean(log_hum_hist, 3)),
+            r_med = signif(median(log_hum_hist, na.rm = TRUE), 3),
+            r_20 = signif(quantile(log_hum_hist, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(log_hum_hist, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(log_hum_hist, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(log_hum_hist, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(log_hum_hist, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(log_hum_hist, na.rm = TRUE), 3),
+            #indicates this value is half lowest MDL
+            r_max = signif(max(log_hum_hist, na.rm = TRUE), 3),
+            r_n = length(log_hum_hist))
+stargazer(new_layer_summary_log, title = "Historic Human Distribution Summary (Log Transform)", 
+          header = F)
+```
+
+### Plots
+
+```{r hum dist hist plots, echo=FALSE, results='asis'}
+# hist - raw data
+dist<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=DISTRB_HUMAN_HIST_HA), binwidth = 50) +
+  ggtitle("Histogram - Raw Data")
+dist
+
+# hist - log data
+dist_log<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=log_hum_hist), binwidth = 0.1) +
+  ggtitle("Histogram - Log Transform")
+dist_log
+
+#qq plot - normality test
+ggqqplot(wau_working$log_hum_hist) +
+  ggtitle("Normality Test")
+
+#normality-test
+ks.test(wau_working$log_hum_hist, "pnorm", sd=sd(wau_working$log_hum_hist))
+```
+
+## Natural Landbase
+### Layer Description
+```{r nat land log transform, echo=FALSE, results='asis'}
+wau_working <- wau_analysis %>%
+  mutate(natlan_perc = round(NATURAL_LANDBASE_HA/ASSESSMENT_UNIT_AREA_HA*100, 2)) %>%
+  mutate(log_natlan = ifelse(OG_ha > 0, log(NATURAL_LANDBASE_HA), NA))
+
+new_layer_summary <- wau_working %>%
+  filter(NATURAL_LANDBASE_HA > 0) %>%
+  summarise(r_mean = signif(mean(NATURAL_LANDBASE_HA, 3)),
+            r_med = signif(median(NATURAL_LANDBASE_HA, na.rm = TRUE), 3),
+            r_20 = signif(quantile(NATURAL_LANDBASE_HA, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(NATURAL_LANDBASE_HA, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(NATURAL_LANDBASE_HA, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(NATURAL_LANDBASE_HA, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(NATURAL_LANDBASE_HA, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(NATURAL_LANDBASE_HA, na.rm = TRUE), 3), 
+            #indicates this value is half lowest MDL
+            r_max = signif(max(NATURAL_LANDBASE_HA, na.rm = TRUE), 3),
+            r_n = length(NATURAL_LANDBASE_HA))
+stargazer(new_layer_summary_log, title = "Natural Landbase Summary (Raw Data)", header = F)
+
+new_layer_summary_log<- wau_working %>%
+  summarise(r_mean = signif(mean(log_natlan, 3)),
+            r_med = signif(median(log_natlan, na.rm = TRUE), 3),
+            r_20 = signif(quantile(log_natlan, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(log_natlan, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(log_natlan, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(log_natlan, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(log_natlan, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(log_natlan, na.rm = TRUE), 3), #indicates this value is half lowest MDL
+            r_max = signif(max(log_natlan, na.rm = TRUE), 3),
+            r_n = length(log_natlan))
+stargazer(new_layer_summary_log, title = "Natural Landbase Summary (Log Transform)", header = F)
+
+```
+
+### Plots
+
+```{r nat land plots, echo=FALSE, results='asis'}
+# hist - raw data
+dist<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=NATURAL_LANDBASE_HA), binwidth = 50) +
+  ggtitle("Histogram - Raw Data")
+dist
+
+# hist - log data
+dist_log<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=log_natlan), binwidth = 0.1) +
+  ggtitle("Histogram - Log Transform")
+dist_log
+
+#qq plot - normality test
+ggqqplot(wau_working$log_natlan) +
+  ggtitle("Normality Test")
+
+
+#normality-test
+ks.test(wau_working$log_natlan, "pnorm", sd=sd(wau_working$log_natlan))
+```
+
+# Analysis of Additional Landscape Features
+
+## CE_Intact
+### Layer Description
+
+```{r ce intact log transform, echo=FALSE, results='asis'}
+wau_working <- wau_analysis %>%
+  mutate(ceintact_perc = round(CEIntact_Ha/ASSESSMENT_UNIT_AREA_HA*100, 2)) %>%
+  mutate(log_ceintact = ifelse(CEIntact_Ha > 0, log(CEIntact_Ha), NA))
+
+new_layer_summary <- wau_working %>%
+  filter(CEIntact_Ha > 0) %>%
+  summarise(r_mean = signif(mean(CEIntact_Ha, 3)),
+            r_med = signif(median(CEIntact_Ha, na.rm = TRUE), 3),
+            r_20 = signif(quantile(CEIntact_Ha, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(CEIntact_Ha, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(CEIntact_Ha, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(CEIntact_Ha, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(CEIntact_Ha, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(CEIntact_Ha, na.rm = TRUE), 3), 
+            #indicates this value is half lowest MDL
+            r_max = signif(max(CEIntact_Ha, na.rm = TRUE), 3),
+            r_n = length(CEIntact_Ha))
+stargazer(new_layer_summary, title = "CE Intact Summary (Raw Data)", header = F)
+
+new_layer_summary_log<- wau_working %>%
+  summarise(r_mean = signif(mean(log_ceintact, 3)),
+            r_med = signif(median(log_ceintact, na.rm = TRUE), 3),
+            r_20 = signif(quantile(log_ceintact, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(log_ceintact, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(log_ceintact, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(log_ceintact, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(log_ceintact, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(log_ceintact, na.rm = TRUE), 3), 
+            #indicates this value is half lowest MDL
+            r_max = signif(max(log_ceintact, na.rm = TRUE), 3),
+            r_n = length(log_ceintact))
+stargazer(new_layer_summary_log, title = "CE Intact Summary (Log Transform)", header = F)
+
+```
+
+### Plots
+
+```{r ce intact plots, echo=FALSE, results='asis'}
+# hist - raw data
+dist<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=CEIntact_Ha), binwidth = 50) +
+  ggtitle("Histogram - Raw Data")
+dist
+
+# hist - log data
+dist_log<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=log_ceintact), binwidth = 0.1) +
+  ggtitle("Histogram - Log Transform")
+dist_log
+
+#qq plot - normality test
+ggqqplot(wau_working$log_ceintact) +
+  ggtitle("Normality Test")
+
+#normality-test
+ks.test(wau_working$log_ceintact, "pnorm", sd=sd(wau_working$log_ceintact))
+
+```
+
+## Unprotected Areas
+### Layer Description
+
+```{r unprotected areas log transform, echo=FALSE, results='asis'}
+wau_working <- wau_analysis %>%
+  mutate(unprot_perc = round(UnProtectedArea_ha/ASSESSMENT_UNIT_AREA_HA*100, 2)) %>%
+  mutate(log_unprot = ifelse(UnProtectedArea_ha > 0, log(UnProtectedArea_ha), NA))
+
+new_layer_summary <- wau_working %>%
+  filter(UnProtectedArea_ha > 0) %>%
+  summarise(r_mean = signif(mean(UnProtectedArea_ha, 3)),
+            r_med = signif(median(UnProtectedArea_ha, na.rm = TRUE), 3),
+            r_20 = signif(quantile(UnProtectedArea_ha, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(UnProtectedArea_ha, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(UnProtectedArea_ha, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(UnProtectedArea_ha, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(UnProtectedArea_ha, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(UnProtectedArea_ha, na.rm = TRUE), 3), 
+            #indicates this value is half lowest MDL
+            r_max = signif(max(UnProtectedArea_ha, na.rm = TRUE), 3),
+            r_n = length(UnProtectedArea_ha))
+stargazer(new_layer_summary_log, title = "Unprotected Area Summary (Raw Data)", header = F)
+
+new_layer_summary_log<- wau_working %>%
+  summarise(r_mean = signif(mean(log_unprot, 3)),
+            r_med = signif(median(log_unprot, na.rm = TRUE), 3),
+            r_20 = signif(quantile(log_unprot, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(log_unprot, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(log_unprot, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(log_unprot, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(log_unprot, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(log_unprot, na.rm = TRUE), 3), #indicates this value is half lowest MDL
+            r_max = signif(max(log_unprot, na.rm = TRUE), 3),
+            r_n = length(log_unprot))
+stargazer(new_layer_summary_log, title = "Unprotected Area Summary (Log Transform)", header = F)
+
+```
+
+### Plots
+
+```{r unprotected areas plots, echo=FALSE, results='asis'}
+# hist - raw data
+dist<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=UnProtectedArea_ha), binwidth = 50) +
+  ggtitle("Histogram - Raw Data")
+dist
+
+# hist - log data
+dist_log<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=log_unprot), binwidth = 0.1) +
+  ggtitle("Histogram - Log Transform")
+dist_log
+
+#qq plot - normality test
+ggqqplot(wau_working$log_unprot) +
+  ggtitle("Normality Test")
+
+#normality-test
+ks.test(wau_working$log_unprot, "pnorm", sd=sd(wau_working$log_unprot))
+```
+
+## BEC Macro
+### Layer Description
+
+```{r bec macror log transform, echo=FALSE, results='asis'}
+wau_working <- wau_analysis %>%
+  mutate(bec_macror_perc = round(BEC_MacroR_ha/ASSESSMENT_UNIT_AREA_HA*100, 2)) %>%
+  mutate(log_bec_macror = ifelse(BEC_MacroR_ha > 0, log(BEC_MacroR_ha), NA))
+
+new_layer_summary <- wau_working %>%
+  filter(BEC_MacroR_ha > 0) %>%
+  summarise(r_mean = signif(mean(BEC_MacroR_ha, 3)),
+            r_med = signif(median(BEC_MacroR_ha, na.rm = TRUE), 3),
+            r_20 = signif(quantile(BEC_MacroR_ha, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(BEC_MacroR_ha, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(BEC_MacroR_ha, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(BEC_MacroR_ha, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(BEC_MacroR_ha, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(BEC_MacroR_ha, na.rm = TRUE), 3), 
+            #indicates this value is half lowest MDL
+            r_max = signif(max(BEC_MacroR_ha, na.rm = TRUE), 3),
+            r_n = length(BEC_MacroR_ha))
+stargazer(new_layer_summary_log, title = "BEC Macrorepresentation Summary (Raw Data)", header = F)
+
+new_layer_summary_log<- wau_working %>%
+  summarise(r_mean = signif(mean(log_bec_macror, 3)),
+            r_med = signif(median(log_bec_macror, na.rm = TRUE), 3),
+            r_20 = signif(quantile(log_bec_macror, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(log_bec_macror, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(log_bec_macror, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(log_bec_macror, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(log_bec_macror, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(log_bec_macror, na.rm = TRUE), 3), 
+            #indicates this value is half lowest MDL
+            r_max = signif(max(log_bec_macror, na.rm = TRUE), 3),
+            r_n = length(log_bec_macror))
+stargazer(new_layer_summary_log, title = "BEC Macrorepresentation Summary (Log Transform)", header = F)
+
+```
+
+### Plots
+
+```{r bec macror plots, echo=FALSE, results='asis'}
+# hist - raw data
+dist<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=BEC_MacroR_ha), binwidth = 50) +
+  ggtitle("Histogram - Raw Data")
+dist
+
+# hist - log data
+dist_log<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=log_bec_macror), binwidth = 0.1) +
+  ggtitle("Histogram - Raw Data")
+dist_log
+
+#qq plot - normality test
+ggqqplot(wau_working$log_bec_macror) +
+  ggtitle("Normality Test")
+
+#normality-test
+ks.test(wau_working$log_bec_macror, "pnorm", sd=sd(wau_working$log_bec_macror))
+```
+
+## BEC Zone Representation
+### Layer Description
+```{r bec rep log transform, echo=FALSE, results='asis'}
+wau_working <- wau_analysis %>%
+  mutate(perc_bec_rep = round(BECrep_ha/ASSESSMENT_UNIT_AREA_HA*100, 2)) %>%
+  mutate(log_bec_rep = ifelse(BECrep_ha > 0, log(BECrep_ha), NA))
+
+new_layer_summary <- wau_working %>%
+  filter(BECrep_ha > 0) %>%
+  summarise(r_mean = signif(mean(BECrep_ha, 3)),
+            r_med = signif(median(BECrep_ha, na.rm = TRUE), 3),
+            r_20 = signif(quantile(BECrep_ha, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(BECrep_ha, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(BECrep_ha, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(BECrep_ha, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(BECrep_ha, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(BECrep_ha, na.rm = TRUE), 3), #indicates this value is half lowest MDL
+            r_max = signif(max(BECrep_ha, na.rm = TRUE), 3),
+            r_n = length(BECrep_ha))
+stargazer(new_layer_summary_log, title = "BEC Representation Summary (Raw Data)", header = F)
+
+new_layer_summary_log<- wau_working %>%
+  summarise(r_mean = signif(mean(log_bec_rep, 3)),
+            r_med = signif(median(log_bec_rep, na.rm = TRUE), 3),
+            r_20 = signif(quantile(log_bec_rep, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(log_bec_rep, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(log_bec_rep, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(log_bec_rep, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(log_bec_rep, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(log_bec_rep, na.rm = TRUE), 3), #indicates this value is half lowest MDL
+            r_max = signif(max(log_bec_rep, na.rm = TRUE), 3),
+            r_n = length(log_bec_rep))
+stargazer(new_layer_summary_log, title = "BEC Representation Summary (Log Transform)", header = F)
+
+```
+
+### Plots
+
+```{r bec rep plots, echo=FALSE, results='asis'}
+# hist - raw data
+dist<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=BECrep_ha), binwidth = 50) +
+  ggtitle("Histogram - Raw Data")
+dist
+
+# hist - log data
+dist_log<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=log_bec_rep), binwidth = 0.1) +
+  ggtitle("Histogram - Log Transform")
+dist_log
+
+#qq plot - normality test
+ggqqplot(wau_working$log_bec_rep) +
+  ggtitle("Normality Test")
+
+#normality-test
+ks.test(wau_working$log_bec_rep, "pnorm", sd=sd(wau_working$log_bec_rep))
+```
+
+## Intact Lands + Corridors
+### Layer Description
+```{r intact lands + corridors log transform, echo=FALSE, results='asis'}
+wau_working <- wau_analysis %>%
+  mutate(int_cor_perc = round(IntactCorridor_ha/ASSESSMENT_UNIT_AREA_HA*100, 2)) %>%
+  mutate(log_int_cor = ifelse(IntactCorridor_ha > 0, log(IntactCorridor_ha), NA))
+
+new_layer_summary <- wau_working %>%
+  filter(IntactCorridor_ha > 0) %>%
+  summarise(r_mean = signif(mean(IntactCorridor_ha, 3)),
+            r_med = signif(median(IntactCorridor_ha, na.rm = TRUE), 3),
+            r_20 = signif(quantile(IntactCorridor_ha, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(IntactCorridor_ha, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(IntactCorridor_ha, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(IntactCorridor_ha, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(IntactCorridor_ha, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(IntactCorridor_ha, na.rm = TRUE), 3), 
+            #indicates this value is half lowest MDL
+            r_max = signif(max(IntactCorridor_ha, na.rm = TRUE), 3),
+            r_n = length(IntactCorridor_ha))
+stargazer(new_layer_summary_log, title = "Intact Lands + Corridors Summary (Raw Data)", header = F)
+
+new_layer_summary_log<- wau_working %>%
+  summarise(r_mean = signif(mean(log_int_cor, 3)),
+            r_med = signif(median(log_int_cor, na.rm = TRUE), 3),
+            r_20 = signif(quantile(log_int_cor, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(log_int_cor, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(log_int_cor, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(log_int_cor, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(log_int_cor, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(log_int_cor, na.rm = TRUE), 3), #indicates this value is half lowest MDL
+            r_max = signif(max(log_int_cor, na.rm = TRUE), 3),
+            r_n = length(log_int_cor))
+stargazer(new_layer_summary_log, title = "Intact Lands + Corridors Summary (Log Transform)", header = F)
+
+```
+
+### Plots
+
+```{r intact lands + corridors plots, echo=FALSE, results='asis'}
+# hist - raw data
+dist<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=IntactCorridor_ha), binwidth = 50) +
+  ggtitle("Histogram - Raw Data")
+
+dist
+
+# hist - log data
+dist_log<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=log_int_cor), binwidth = 0.1) +
+  ggtitle("Histogram - Log Transform")
+dist_log
+
+#qq plot - normality test
+ggqqplot(wau_working$log_int_cor) +
+  ggtitle("Normality Test")
+
+#normality-test
+ks.test(wau_working$log_int_cor, "pnorm", sd=sd(wau_working$log_int_cor))
+```
+
+## Intact Lands
+### Layer Description
+```{r intact lands log transform, echo=FALSE, results='asis'}
+wau_working <- wau_analysis %>%
+  mutate(int_perc = round(Intact_ha/ASSESSMENT_UNIT_AREA_HA*100, 2)) %>%
+  mutate(log_int = ifelse(OG_ha > 0, log(OG_ha), NA))
+
+new_layer_summary <- wau_working %>%
+  filter(Intact_ha > 0) %>%
+  summarise(r_mean = signif(mean(Intact_ha)),
+            r_med = signif(median(Intact_ha, na.rm = TRUE), 3),
+            r_20 = signif(quantile(Intact_ha, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(Intact_ha, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(Intact_ha, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(Intact_ha, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(Intact_ha, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(Intact_ha, na.rm = TRUE), 3), #indicates this value is half lowest MDL
+            r_max = signif(max(Intact_ha, na.rm = TRUE), 3),
+            r_n = length(Intact_ha))
+stargazer(new_layer_summary_log, title = "Intact Lands Summary (Raw Data)", header = F)
+
+new_layer_summary_log<- wau_working %>%
+  summarise(r_mean = signif(mean(log_int, 3)),
+            r_med = signif(median(log_int, na.rm = TRUE), 3),
+            r_20 = signif(quantile(log_int, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(log_int, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(log_int, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(log_int, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(log_int, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(log_int, na.rm = TRUE), 3), #indicates this value is half lowest MDL
+            r_max = signif(max(log_int, na.rm = TRUE), 3),
+            r_n = length(log_int))
+stargazer(new_layer_summary_log, title = "Intact Lands Summary (Log Transform)", header = F)
+
+```
+
+### Plots
+
+```{r intact lands plots, echo=FALSE, results='asis'}
+# hist - raw data
+dist<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=Intact_ha), binwidth = 50) +
+  ggtitle("Histogram - Raw Data")
+dist
+
+# hist - log data
+dist_log<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=log_int), binwidth = 0.1) +
+  ggtitle("Histogram - Log Transform")
+dist_log
+
+#qq plot - normality test
+ggqqplot(wau_working$log_int) +
+  ggtitle("Normality Test")
+
+#normality-test
+ks.test(wau_working$log_int, "pnorm", sd=sd(wau_working$log_int))
+```
+
+## Corridors
+### Layer Description
+```{r corridors log transform, echo=FALSE, results='asis'}
+wau_working <- wau_analysis %>%
+  mutate(cor_perc = round(Corridor_ha/ASSESSMENT_UNIT_AREA_HA*100, 2)) %>%
+  mutate(log_cor = ifelse(Corridor_ha > 0, log(Corridor_ha), NA))
+
+new_layer_summary <- wau_working %>%
+  filter(Corridor_ha > 0) %>%
+  summarise(r_mean = signif(mean(Corridor_ha, 3)),
+            r_med = signif(median(Corridor_ha, na.rm = TRUE), 3),
+            r_20 = signif(quantile(Corridor_ha, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(Corridor_ha, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(Corridor_ha, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(Corridor_ha, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(Corridor_ha, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(Corridor_ha, na.rm = TRUE), 3), #indicates this value is half lowest MDL
+            r_max = signif(max(Corridor_ha, na.rm = TRUE), 3),
+            r_n = length(Corridor_ha))
+stargazer(new_layer_summary_log, title = "Corridors Summary (Raw Data)", header = F)
+
+new_layer_summary_log<- wau_working %>%
+  summarise(r_mean = signif(mean(log_cor, 3)),
+            r_med = signif(median(log_cor, na.rm = TRUE), 3),
+            r_20 = signif(quantile(log_cor, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(log_cor, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(log_cor, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(log_cor, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(log_cor, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(log_cor, na.rm = TRUE), 3), #indicates this value is half lowest MDL
+            r_max = signif(max(log_cor, na.rm = TRUE), 3),
+            r_n = length(log_cor))
+stargazer(new_layer_summary_log, title = "Corridors Summary (Log Transform)", header = F)
+
+```
+
+### Plots
+
+```{r corridors plots, echo=FALSE, results='asis'}
+# hist - raw data
+dist<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=Corridor_ha), binwidth = 50) +
+    ggtitle("Histogram - Raw Data")
+dist
+
+# hist - log data
+dist_log<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=log_cor), binwidth = 0.1) + 
+  ggtitle("Histogram - Log Transform")
+dist_log
+
+#qq plot - normality test
+ggqqplot(wau_working$log_cor) + 
+    ggtitle("Normality Test")
+
+#normality-test
+ks.test(wau_working$log_cor, "pnorm", sd=sd(wau_working$log_cor))
+```
+
+## Old Growth Recruitment
+### Layer Description
+```{r og_recruit log transform, echo=FALSE, results='asis'}
+wau_working <- wau_analysis %>%
+  mutate(og_recruit_perc = round(OG_recruit_ha/ASSESSMENT_UNIT_AREA_HA*100, 2)) %>%
+  mutate(log_og_recruit = ifelse(OG_recruit_ha > 0, log(OG_recruit_ha), NA))
+
+new_layer_summary <- wau_working %>%
+  filter(OG_recruit_ha > 0) %>%
+  summarise(r_mean = signif(mean(OG_recruit_ha, 3)),
+            r_med = signif(median(OG_recruit_ha, na.rm = TRUE), 3),
+            r_20 = signif(quantile(OG_recruit_ha, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(OG_recruit_ha, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(OG_recruit_ha, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(OG_recruit_ha, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(OG_recruit_ha, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(OG_recruit_ha, na.rm = TRUE), 3), 
+            #indicates this value is half lowest MDL
+            r_max = signif(max(OG_recruit_ha, na.rm = TRUE), 3),
+            r_n = length(OG_recruit_ha))
+stargazer(new_layer_summary_log, title = "Old Growth Recruitment Summary (Raw Data)", header = F)
+
+new_layer_summary_log<- wau_working %>%
+  summarise(r_mean = signif(mean(log_og_recruit, 3)),
+            r_med = signif(median(log_og_recruit, na.rm = TRUE), 3),
+            r_20 = signif(quantile(log_og_recruit, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(log_og_recruit, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(log_og_recruit, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(log_og_recruit, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(log_og_recruit, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(log_og_recruit, na.rm = TRUE), 3), 
+            #indicates this value is half lowest MDL
+            r_max = signif(max(log_og_recruit, na.rm = TRUE), 3),
+            r_n = length(log_og_recruit))
+stargazer(new_layer_summary_log, title = "Old Growth Recruitment Summary (Log Transform)", header = F)
+
+```
+
+### Plots
+
+```{r og_recruit plots, echo=FALSE, results='asis'}
+# hist - raw data
+dist<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=OG_recruit_ha), binwidth = 50) +
+  ggtitle("Histogram - Raw Data")
+dist
+
+# hist - log data
+dist_log<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=log_og_recruit), binwidth = 0.1) +
+  ggtitle("Histogram - Log Transform")
+dist_log
+
+#qq plot - normality test
+ggqqplot(wau_working$log_og_recruit) +
+  ggtitle("Normality Test")
+
+#normality-test
+ks.test(wau_working$log_og_recruit, "pnorm", sd=sd(wau_working$log_og_recruit))
+```
+
+## Old Growth
+### Layer Description
+
+```{r og log transform, echo=FALSE, results='asis'}
+wau_working <- wau_analysis %>%
+  mutate(og_perc = round(OG_ha/ASSESSMENT_UNIT_AREA_HA*100, 2)) %>%
+  mutate(log_OG = ifelse(OG_ha > 0, log(OG_ha), NA))
+
+new_layer_summary <- wau_working %>%
+  filter(OG_ha > 0) %>%
+  summarise(r_mean = signif(mean(OG_ha, 3)),
+            r_med = signif(median(OG_ha, na.rm = TRUE), 3),
+            r_20 = signif(quantile(OG_ha, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(OG_ha, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(OG_ha, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(OG_ha, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(OG_ha, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(OG_ha, na.rm = TRUE), 3), #indicates this value is half lowest MDL
+            r_max = signif(max(OG_ha, na.rm = TRUE), 3),
+            r_n = length(OG_ha))
+stargazer(new_layer_summary_log, title = "Old Growth Summary (Raw Data)", header = F)
+
+new_layer_summary_log<- wau_working %>%
+  summarise(r_mean = signif(mean(log_OG, 3)),
+            r_med = signif(median(log_OG, na.rm = TRUE), 3),
+            r_20 = signif(quantile(log_OG, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(log_OG, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(log_OG, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(log_OG, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(log_OG, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(log_OG, na.rm = TRUE), 3), #indicates this value is half lowest MDL
+            r_max = signif(max(log_OG, na.rm = TRUE), 3),
+            r_n = length(log_OG))
+stargazer(new_layer_summary_log, title = "Old Growth Summary (Log Transform)", header = F)
+
+```
+
+### Plots
+
+```{r og plots, echo=FALSE, results='asis'}
+# hist - raw data
+dist<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=OG_ha), binwidth = 50) +
+  ggtitle("Histogram - Raw Data")
+dist
+
+# hist - log data
+dist_log<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=log_OG), binwidth = 0.1) +
+  ggtitle("Histogram - Log Transform")
+dist_log
+
+#qq plot - normality test
+ggqqplot(wau_working$log_OG) +
+  ggtitle("Normality Test")
+
+#normality-test
+ks.test(wau_working$log_OG, "pnorm", sd=sd(wau_working$log_OG))
+```
+
+## Critical Habitat (Species at Risk)
+### Layer Description
+```{r crit hab log transform, echo=FALSE, results='asis'}
+wau_working <- wau_analysis %>%
+  mutate(ch_perc = round(CH_ha/ASSESSMENT_UNIT_AREA_HA*100, 2)) %>%
+  mutate(log_ch = ifelse(CH_ha > 0, log(CH_ha), NA))
+
+new_layer_summary <- wau_working %>%
+  filter(CH_ha > 0) %>%
+  summarise(r_mean = signif(mean(CH_ha, 3)),
+            r_med = signif(median(CH_ha, na.rm = TRUE), 3),
+            r_20 = signif(quantile(CH_ha, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(CH_ha, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(CH_ha, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(CH_ha, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(CH_ha, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(CH_ha, na.rm = TRUE), 3), #indicates this value is half lowest MDL
+            r_max = signif(max(CH_ha, na.rm = TRUE), 3),
+            r_n = length(CH_ha))
+stargazer(new_layer_summary_log, title = "Critical Habitat Summary (Raw Data)", header = F)
+
+new_layer_summary_log<- wau_working %>%
+  summarise(r_mean = signif(mean(log_ch, 3)),
+            r_med = signif(median(log_ch, na.rm = TRUE), 3),
+            r_20 = signif(quantile(log_ch, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(log_ch, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(log_ch, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(log_ch, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(log_ch, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(log_ch, na.rm = TRUE), 3), #indicates this value is half lowest MDL
+            r_max = signif(max(log_ch, na.rm = TRUE), 3),
+            r_n = length(log_ch))
+stargazer(new_layer_summary_log, title = "Critical Habitat Summary (Log Transform)", header = F)
+
+```
+
+### Plots
+
+```{r crit hab plots, echo=FALSE, results='asis'}
+# hist - raw data
+dist<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=CH_ha), binwidth = 50) +
+  ggtitle("Histogram - Raw Data")
+dist
+
+# hist - log data
+dist_log<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=log_ch), binwidth = 0.1) +
+  ggtitle("Histogram - Log Transform")
+dist_log
+
+#qq plot - normality test
+ggqqplot(wau_working$log_ch) +
+  ggtitle("Normality Test")
+
+#normality-test
+ks.test(wau_working$log_ch, "pnorm", sd=sd(wau_working$log_ch))
+```
+
+## Key Biodiversity Areas (KBAs)
+### Layer Description
+```{r kba log transform, echo=FALSE, results='asis'}
+wau_working <- wau_analysis %>%
+  mutate(kba_perc = round(KBA_ha/ASSESSMENT_UNIT_AREA_HA*100, 2)) %>%
+  mutate(log_kba = ifelse(KBA_ha > 0, log(KBA_ha), NA))
+
+new_layer_summary <- wau_working %>%
+  filter(KBA_ha > 0) %>%
+  summarise(r_mean = signif(mean(KBA_ha, 3)),
+            r_med = signif(median(KBA_ha, na.rm = TRUE), 3),
+            r_20 = signif(quantile(KBA_ha, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(KBA_ha, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(KBA_ha, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(KBA_ha, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(KBA_ha, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(KBA_ha, na.rm = TRUE), 3), #indicates this value is half lowest MDL
+            r_max = signif(max(KBA_ha, na.rm = TRUE), 3),
+            r_n = length(KBA_ha))
+stargazer(new_layer_summary_log, title = "Key Biodiversity Areas Summary (Raw Data)", header = F)
+
+new_layer_summary_log<- wau_working %>%
+  summarise(r_mean = signif(mean(log_kba, 3)),
+            r_med = signif(median(log_kba, na.rm = TRUE), 3),
+            r_20 = signif(quantile(log_kba, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(log_kba, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(log_kba, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(log_kba, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(log_kba, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(log_kba, na.rm = TRUE), 3), #indicates this value is half lowest MDL
+            r_max = signif(max(log_kba, na.rm = TRUE), 3),
+            r_n = length(log_kba))
+stargazer(new_layer_summary_log, title = "Key Biodiversity Areas Summary (Log Transform)", header = F)
+
+```
+
+### Plots
+
+```{r kba plots, echo=FALSE, results='asis'}
+# hist - raw data
+dist<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=KBA_ha), binwidth = 50) +
+  ggtitle("Histogram - Raw Data")
+dist
+
+# hist - log data
+dist_log<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=log_kba), binwidth = 0.1) +
+  ggtitle("Histogram - Log Transform")
+dist_log
+
+#qq plot - normality test
+ggqqplot(wau_working$log_kba) +
+  ggtitle("Normality Test")
+
+#normality-test
+ks.test(wau_working$log_kba, "pnorm", sd=sd(wau_working$log_kba))
+```
+
+## Wetlands
+### Layer Description
+```{r wetlands log transform, echo=FALSE, results='asis'}
+wau_working <- wau_analysis %>%
+  mutate(wetlands_perc = round(wetlands_ha/ASSESSMENT_UNIT_AREA_HA*100, 2)) %>%
+  mutate(log_wetlands = ifelse(wetlands_ha > 0, log(wetlands_ha), NA))
+
+new_layer_summary <- wau_working %>%
+  filter(wetlands_ha > 0) %>%
+  summarise(r_mean = signif(mean(wetlands_ha, 3)),
+            r_med = signif(median(wetlands_ha, na.rm = TRUE), 3),
+            r_20 = signif(quantile(wetlands_ha, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(wetlands_ha, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(wetlands_ha, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(wetlands_ha, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(wetlands_ha, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(wetlands_ha, na.rm = TRUE), 3), #indicates this value is half lowest MDL
+            r_max = signif(max(wetlands_ha, na.rm = TRUE), 3),
+            r_n = length(wetlands_ha))
+stargazer(new_layer_summary_log, title = "Wetlands Summary", header = F)
+
+new_layer_summary_log<- wau_working %>%
+  summarise(r_mean = signif(mean(log_wetlands, 3)),
+            r_med = signif(median(log_wetlands, na.rm = TRUE), 3),
+            r_20 = signif(quantile(log_wetlands, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(log_wetlands, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(log_wetlands, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(log_wetlands, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(log_wetlands, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(log_wetlands, na.rm = TRUE), 3), 
+            #indicates this value is half lowest MDL
+            r_max = signif(max(log_wetlands, na.rm = TRUE), 3),
+            r_n = length(log_wetlands))
+stargazer(new_layer_summary_log, title = "Wetlands Summary (Log Transform)", header = F)
+
+```
+
+### Plots
+
+```{r wetlands plots, echo=FALSE, results='asis'}
+# hist - raw data
+dist<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=wetlands_ha), binwidth = 50) +
+  ggtitle("Histogram - Raw Data")
+dist
+
+# hist - log data
+dist_log<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=log_wetlands), binwidth = 0.1) +
+  ggtitle("Histogram - Log Transform")
+dist_log
+
+#qq plot - normality test
+ggqqplot(wau_working$log_wetlands) +
+  ggtitle("Normality Test")
+
+#normality-test
+ks.test(wau_working$log_wetlands, "pnorm", sd=sd(wau_working$log_wetlands))
+```
