@@ -16,13 +16,11 @@ source('packages.R')
 
 ######################  Load most recent WAU data
 
-
 # Load basic watershed info
 
 wau_base <- st_read("data/aqua_sfE.gpkg", crs=3005) %>%
   st_cast(to="MULTIPOLYGON") %>%
   st_make_valid()
-
 
 # Create a basic raster in hectares BC format
 BCr_file <- file.path(spatialOutDir,"BCr.tif")
