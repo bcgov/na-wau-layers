@@ -12,6 +12,9 @@
 
 
 
+
+
+
 ### EXTRA CODE ##### For combining columns for future scenarios
 mutate(Rank=case_when(
   (Low>0 & Low<=3) & Medium==0 & High==0 & VHigh==0 ~ 'Low',
@@ -22,3 +25,26 @@ mutate(Rank=case_when(
     (Low>=0 & Medium>=0 & High>=2 & VHigh==0) ~ 'VHigh',
   (Low==0 & Medium==0 & High==0 & VHigh==0 ~ 'Negligible' )
 ))
+
+
+scenario_wau <- wau_ranking %>%
+mutate(og_number = case_when(
+  og_rank == "None"  ~ 0,
+  og_rank == "Negligible" ~1,
+  og_rank == "Low"  ~ 2,
+  og_rank == "Medium" ~ 3,
+  og_rank == "High" ~ 4,
+  og_rank == "VeryHigh" ~ 5
+),
+og_ch = og_number + CH_haclass,
+og_ch_rank = case_when(
+  og_ch == 1 ~ "Negligible",
+  og_ch > 1 & og_ch <=2 ~ "Low",
+  og_ch > 2 & og_ch <=4 ~ "Medium",
+  og_ch > 4 & og_ch <=6 ~ "High",
+  og_ch >6 ~ "VeryHigh")
+)
+
+new_wau <- wau_analysis %>% left_join(scenario_wau)
+
+write_sf(new_wau, "out/wau_scenario.gpkg")
