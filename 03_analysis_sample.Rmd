@@ -1,6 +1,6 @@
 ---
 title: "Watershed Assessment Unit Analysis"
-subtitle: "Layer Summary: Old Growth (Priority Deferral Areas)"
+subtitle: "Layer Summary"
 author: "Environmental Reporting BC"
 date: "24/1/2022"
 output: pdf_document
@@ -22,23 +22,30 @@ wau_analysis <- st_read("data/wshd_w_elements.gpkg", crs=3005) %>%
 
 ```
 
-# Introduction and Rationale
 
-This document presents the output of the Old Growth (Priority Deferral Area) layer analyzed to the watershed assessment unit (WAU) level. The code used to generate this output could be applied to any layer of interest. This project is set up that each new layer is loaded, converted to the right specs (01_load.R), extracted to WAU (02_clean.R), and then binned (03_analysis.R).The original WAU layer is then re-written with the new layer. This workflow will create flexibility in whatever layers are added in the future.
+This document provides background information for processing the `r element` layer. 
+
+
+```{r}
+# Bring in data dictionary details here 
+# - version number
+# - data source (where is file saved)
+# - important derivation methods
+
+```
+
  
-The hectares from each of our input layers have been extracted into WAUs and were preliminarily binned (these bins should not be used for analysis at this time). 
-
-# Old Growth Layer Analysis
+# Layer Analysis
 
 Depending on the layer, different transformations will fit the data best, but due to data type, most will have skewed right distributions (long right tail). Here we have created a log transformation column (for right-skewed data) and a square root transformation column (for left skewed data) to test which transformation is the right fit. Note that 0's were removed and made 'none'. Below we have also included plots for a natural breaks (Jenks) transformation, which is best suited to  data that is unevenly distributed but not skewed towards either end of the distribution.
 
 ```{r f_own, echo=FALSE, results='asis'}
 wau_working <- wau_analysis %>%
   mutate(og_perc = round(OG_ha/ASSESSMENT_UNIT_AREA_HA*100, 2)) %>%
-  mutate(log_OG = ifelse(OG_ha > 0, log(OG_ha), NA)) %>%
-  mutate (sqrt_OG = ifelse(OG_ha >0, sqrt(OG_ha), NA)) # for right-skewed data
+  mutate(log_OG = ifelse(OG_ha>0, log(OG_ha), NA)) %>%
+  mutate(sqrt_OG = ifelse(OG_ha>0, sqrt(OG_ha), NA)) # for right-skewed data
 
-wau_jenks <- getJenksBreaks(wau_analysis$OG_ha, 10)
+wau_jenks <- getJenksBreaks(wau_analysis$OG_ha, 6)
 
 new_layer_summary <- wau_working %>%
   filter(OG_ha > 0) %>%
@@ -51,7 +58,8 @@ new_layer_summary <- wau_working %>%
             r_95 = signif(quantile(OG_ha, prob=0.95, na.rm = TRUE), 3),
             r_min = signif(min(OG_ha, na.rm = TRUE), 3), #indicates this value is half lowest MDL
             r_max = signif(max(OG_ha, na.rm = TRUE), 3),
-            r_n = length(OG_ha))
+            r_n = length(OG_ha))%>% 
+  mutate(transformation = "raw")
 
 new_layer_summary_log<- wau_working %>%
   summarise(r_mean = signif(mean(log_OG, 3)),
@@ -63,7 +71,23 @@ new_layer_summary_log<- wau_working %>%
             r_95 = signif(quantile(log_OG, prob=0.95, na.rm = TRUE), 3),
             r_min = signif(min(log_OG, na.rm = TRUE), 3), #indicates this value is half lowest MDL
             r_max = signif(max(log_OG, na.rm = TRUE), 3),
-            r_n = length(log_OG))
+            r_n = length(log_OG)) %>% 
+  mutate(transformation = "log")
+
+new_layer_summary_sqrt<- wau_working %>%
+  summarise(r_mean = signif(mean(sqrt_OG, 3)),
+            r_med = signif(median(sqrt_OG, na.rm = TRUE), 3),
+            r_20 = signif(quantile(sqrt_OG, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(sqrt_OG, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(sqrt_OG, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(sqrt_OG, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(sqrt_OG, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(sqrt_OG, na.rm = TRUE), 3), #indicates this value is half lowest MDL
+            r_max = signif(max(sqrt_OG, na.rm = TRUE), 3),
+            r_n = length(sqrt_OG)) %>% 
+  mutate(transformation = "sqrt")
+
+summary <- bind_rows(new_layer_summary, new_layer_summary_log, new_layer_summary_sqrt)
 ```
 
 # Figures
@@ -79,31 +103,31 @@ dist
 dist_log<-ggplot(data=wau_working) +
   geom_histogram(mapping = aes(x=log_OG), binwidth = 0.1) +
   ggtitle("Log Transformed Data") 
-dist_log
-
-# hist - sqrt data
-dist_sqrt<-ggplot(data=wau_working) +
-  geom_histogram(mapping = aes(x=sqrt_OG), binwidth = 0.1) +
-  ggtitle("Square Root Transformed Data") 
-dist_sqrt
+dist_log 
 
 #qq plot - normality test
 log_qq <- ggqqplot(wau_working$log_OG) +
   ggtitle("Normality Test - Log Transformed Data")
 log_qq
 
+ks.test(wau_working$log_OG, "pnorm")
+
+# hist - sqrt data
+dist_sqrt<-ggplot(data=wau_working) +
+  geom_histogram(mapping = aes(x=sqrt_OG), binwidth = 5) +
+  ggtitle("Square Root Transformed Data") 
+dist_sqrt
+
 #qq plot - normality test
-sqrt_qq <- ggqqplot(wau_working$log_OG) +
+sqrt_qq <- ggqqplot(wau_working$sqrt_OG) +
   ggtitle("Normality Test - Square Root Transformed Data")
 sqrt_qq
 
-plot(wau_jenks, main = "Old Growth Data - Natural Breaks (Jenks) Transformation")
-
-#normality-test - log
-ks.test(wau_working$log_OG, "pnorm", sd=sd(wau_working$log_OG))
 
 #normality-test - sqrt
-ks.test(wau_working$sqrt_OG, "pnorm", sd=sd(wau_working$sqrt_OG))
+ks.test(wau_working$sqrt_OG, "pnorm")
+
+plot(wau_jenks, main = "Old Growth Data - Natural Breaks (Jenks) Transformation")
 
 #Classify based on percentiles
 wau_ranking <- wau_working %>%
@@ -121,20 +145,22 @@ wau_ranking <- wau_working %>%
     log_OG > new_layer_summary_log$r_20 & log_OG <= new_layer_summary_log$r_40 ~ 'Low',
     log_OG > new_layer_summary_log$r_40 & log_OG <= new_layer_summary_log$r_60 ~ 'Medium',
     log_OG > new_layer_summary_log$r_60 & log_OG <= new_layer_summary_log$r_80 ~ 'High',
-    log_OG > new_layer_summary_log$r_80 & log_OG <= new_layer_summary_log$r_max ~ 'VeryHigh'))
+    log_OG > new_layer_summary_log$r_80 & log_OG <= new_layer_summary_log$r_max ~ 'VeryHigh'), 
+  og_rank_sqrt = case_when(
+    OG_ha == 0 ~ 'None',
+    sqrt_OG >= new_layer_summary_sqrt$r_min & log_OG <= new_layer_summary_sqrt$r_20 ~ 'Negligible',
+    sqrt_OG > new_layer_summary_sqrt$r_20 & log_OG <= new_layer_summary_sqrt$r_40 ~ 'Low',
+    sqrt_OG > new_layer_summary_sqrt$r_40 & log_OG <= new_layer_summary_sqrt$r_60 ~ 'Medium',
+    sqrt_OG > new_layer_summary_sqrt$r_60 & log_OG <= new_layer_summary_sqrt$r_80 ~ 'High',
+    sqrt_OG > new_layer_summary_sqrt$r_80 & log_OG <= new_layer_summary_sqrt$r_max ~ 'VeryHigh')
+  )
 
-stargazer(wau_ranking[23:50], title = "Summary - Data Classed by Percentiles")
+#stargazer(wau_ranking[23:50], title = "Summary - Data Classed by Percentiles")
 
-# percentile histogram - raw
-perc_raw<-ggplot(wau_ranking) +
-  geom_bar(aes(x=og_rank)) +
-  ggtitle("Raw Data Classified by Percentiles")
-perc_raw
 
-# percentile hist - logged
-perc_log <-ggplot(wau_ranking) +
-  geom_bar(aes(x=og_rank_log)) +
-  ggtitle("Logged Data Classified by Percentiles")
-perc_log
+
+
+ggplot(data=wau_ranking, mapping=aes(x=aqua_id, y=OG_ha, color = og_rank))+
+  geom_boxplot() 
 
 ```
