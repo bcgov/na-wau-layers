@@ -15,10 +15,8 @@ source('packages.R')
 ```
 
 ```{r load gpkg, include=FALSE}
-wau_analysis <- st_read("data/wshd_w_elements.gpkg", crs=3005) %>%
-  st_cast(to="MULTIPOLYGON") %>%
-  st_make_valid() %>%
-  st_drop_geometry()
+
+wau_new_layer <- readRDS(file = paste0("tmp/", element, '_vect'))
 
 ```
 
@@ -40,51 +38,51 @@ This document provides background information for processing the `r element` lay
 Depending on the layer, different transformations will fit the data best, but due to data type, most will have skewed right distributions (long right tail). Here we have created a log transformation column (for right-skewed data) and a square root transformation column (for left skewed data) to test which transformation is the right fit. Note that 0's were removed and made 'none'. Below we have also included plots for a natural breaks (Jenks) transformation, which is best suited to  data that is unevenly distributed but not skewed towards either end of the distribution.
 
 ```{r f_own, echo=FALSE, results='asis'}
-wau_working <- wau_analysis %>%
-  mutate(og_perc = round(OG_ha/ASSESSMENT_UNIT_AREA_HA*100, 2)) %>%
-  mutate(log_OG = ifelse(OG_ha>0, log(OG_ha), NA)) %>%
-  mutate(sqrt_OG = ifelse(OG_ha>0, sqrt(OG_ha), NA)) # for right-skewed data
+wau_working <- wau_new_layer %>%
+  mutate(perc_area = round(wau_area/ASSESSMENT_UNIT_AREA_HA*100, 2)) %>%
+  mutate(log_area = ifelse(wau_area>0, log(wau_area), NA)) %>%
+  mutate(sqrt_area = ifelse(wau_area>0, sqrt(wau_area), NA)) # for right-skewed data
 
-wau_jenks <- getJenksBreaks(wau_analysis$OG_ha, 6)
+wau_jenks <- getJenksBreaks(wau_working$wau_area, 6)
 
 new_layer_summary <- wau_working %>%
-  filter(OG_ha > 0) %>%
-  summarise(r_mean = signif(mean(OG_ha, 3)),
-            r_med = signif(median(OG_ha, na.rm = TRUE), 3),
-            r_20 = signif(quantile(OG_ha, prob=0.20, na.rm = TRUE), 3),
-            r_40 = signif(quantile(OG_ha, prob=0.40, na.rm = TRUE), 3),
-            r_60 = signif(quantile(OG_ha, prob=0.60, na.rm = TRUE), 3),
-            r_80 = signif(quantile(OG_ha, prob=0.80, na.rm = TRUE), 3),
-            r_95 = signif(quantile(OG_ha, prob=0.95, na.rm = TRUE), 3),
-            r_min = signif(min(OG_ha, na.rm = TRUE), 3), #indicates this value is half lowest MDL
-            r_max = signif(max(OG_ha, na.rm = TRUE), 3),
-            r_n = length(OG_ha))%>% 
+  filter(wau_area > 0) %>%
+  summarise(r_mean = signif(mean(wau_area, 3)),
+            r_med = signif(median(wau_area, na.rm = TRUE), 3),
+            r_20 = signif(quantile(wau_area, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(wau_area, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(wau_area, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(wau_area, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(wau_area, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(wau_area, na.rm = TRUE), 3), #indicates this value is half lowest MDL
+            r_max = signif(max(wau_area, na.rm = TRUE), 3),
+            r_n = length(wau_area))%>% 
   mutate(transformation = "raw")
 
 new_layer_summary_log<- wau_working %>%
-  summarise(r_mean = signif(mean(log_OG, 3)),
-            r_med = signif(median(log_OG, na.rm = TRUE), 3),
-            r_20 = signif(quantile(log_OG, prob=0.20, na.rm = TRUE), 3),
-            r_40 = signif(quantile(log_OG, prob=0.40, na.rm = TRUE), 3),
-            r_60 = signif(quantile(log_OG, prob=0.60, na.rm = TRUE), 3),
-            r_80 = signif(quantile(log_OG, prob=0.80, na.rm = TRUE), 3),
-            r_95 = signif(quantile(log_OG, prob=0.95, na.rm = TRUE), 3),
-            r_min = signif(min(log_OG, na.rm = TRUE), 3), #indicates this value is half lowest MDL
-            r_max = signif(max(log_OG, na.rm = TRUE), 3),
-            r_n = length(log_OG)) %>% 
+  summarise(r_mean = signif(mean(log_area, 3)),
+            r_med = signif(median(log_area, na.rm = TRUE), 3),
+            r_20 = signif(quantile(log_area, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(log_area, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(log_area, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(log_area, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(log_area, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(log_area, na.rm = TRUE), 3), #indicates this value is half lowest MDL
+            r_max = signif(max(log_area, na.rm = TRUE), 3),
+            r_n = length(log_area)) %>% 
   mutate(transformation = "log")
 
 new_layer_summary_sqrt<- wau_working %>%
-  summarise(r_mean = signif(mean(sqrt_OG, 3)),
-            r_med = signif(median(sqrt_OG, na.rm = TRUE), 3),
-            r_20 = signif(quantile(sqrt_OG, prob=0.20, na.rm = TRUE), 3),
-            r_40 = signif(quantile(sqrt_OG, prob=0.40, na.rm = TRUE), 3),
-            r_60 = signif(quantile(sqrt_OG, prob=0.60, na.rm = TRUE), 3),
-            r_80 = signif(quantile(sqrt_OG, prob=0.80, na.rm = TRUE), 3),
-            r_95 = signif(quantile(sqrt_OG, prob=0.95, na.rm = TRUE), 3),
-            r_min = signif(min(sqrt_OG, na.rm = TRUE), 3), #indicates this value is half lowest MDL
-            r_max = signif(max(sqrt_OG, na.rm = TRUE), 3),
-            r_n = length(sqrt_OG)) %>% 
+  summarise(r_mean = signif(mean(sqrt_area, 3)),
+            r_med = signif(median(sqrt_area, na.rm = TRUE), 3),
+            r_20 = signif(quantile(sqrt_area, prob=0.20, na.rm = TRUE), 3),
+            r_40 = signif(quantile(sqrt_area, prob=0.40, na.rm = TRUE), 3),
+            r_60 = signif(quantile(sqrt_area, prob=0.60, na.rm = TRUE), 3),
+            r_80 = signif(quantile(sqrt_area, prob=0.80, na.rm = TRUE), 3),
+            r_95 = signif(quantile(sqrt_area, prob=0.95, na.rm = TRUE), 3),
+            r_min = signif(min(sqrt_area, na.rm = TRUE), 3), #indicates this value is half lowest MDL
+            r_max = signif(max(sqrt_area, na.rm = TRUE), 3),
+            r_n = length(sqrt_area)) %>% 
   mutate(transformation = "sqrt")
 
 summary <- bind_rows(new_layer_summary, new_layer_summary_log, new_layer_summary_sqrt)
@@ -93,66 +91,70 @@ summary <- bind_rows(new_layer_summary, new_layer_summary_log, new_layer_summary
 # Figures
 
 ```{r f_own plots, echo=FALSE, warning=FALSE, results='asis'}
-#hist - raw data
+###### hist - raw data
 dist<-ggplot(data=wau_working) +
-  geom_histogram(mapping = aes(x=OG_ha), binwidth = 50) +
+  geom_histogram(mapping = aes(x=wau_area), binwidth = 50) +
   ggtitle("Raw Data (No Transformations Applied)")
 dist
 
-# hist - log data
+
+
+###### hist - log data
 dist_log<-ggplot(data=wau_working) +
-  geom_histogram(mapping = aes(x=log_OG), binwidth = 0.1) +
+  geom_histogram(mapping = aes(x=log_area), binwidth = 0.1) +
   ggtitle("Log Transformed Data") 
 dist_log 
 
 #qq plot - normality test
-log_qq <- ggqqplot(wau_working$log_OG) +
+log_qq <- ggqqplot(wau_working$log_area) +
   ggtitle("Normality Test - Log Transformed Data")
 log_qq
 
-ks.test(wau_working$log_OG, "pnorm")
+ks.test(wau_working$log_area, "pnorm")
+
+
 
 # hist - sqrt data
 dist_sqrt<-ggplot(data=wau_working) +
-  geom_histogram(mapping = aes(x=sqrt_OG), binwidth = 5) +
+  geom_histogram(mapping = aes(x=sqrt_area), binwidth = 5) +
   ggtitle("Square Root Transformed Data") 
 dist_sqrt
 
 #qq plot - normality test
-sqrt_qq <- ggqqplot(wau_working$sqrt_OG) +
+sqrt_qq <- ggqqplot(wau_working$sqrt_area) +
   ggtitle("Normality Test - Square Root Transformed Data")
 sqrt_qq
 
 
 #normality-test - sqrt
-ks.test(wau_working$sqrt_OG, "pnorm")
+ks.test(wau_working$sqrt_area, "pnorm")
 
 plot(wau_jenks, main = "Old Growth Data - Natural Breaks (Jenks) Transformation")
 
 #Classify based on percentiles
 wau_ranking <- wau_working %>%
-  mutate(og_rank = case_when(
-    OG_ha == 0 ~ 'None',
-    OG_ha > 0 & OG_ha <= new_layer_summary$r_20 ~ 'Negligible',
-    OG_ha > new_layer_summary$r_20 & OG_ha <= new_layer_summary$r_40 ~ 'Low',
-    OG_ha > new_layer_summary$r_40 & OG_ha <= new_layer_summary$r_60 ~ 'Medium',
-    OG_ha > new_layer_summary$r_60 & OG_ha <= new_layer_summary$r_80 ~ 'High',
-    OG_ha > new_layer_summary$r_80 & OG_ha <= new_layer_summary$r_max ~ 'VeryHigh'
+  mutate(rank = case_when(
+    wau_area == 0 ~ 'None',
+    wau_area > 0 & wau_area <= new_layer_summary$r_20 ~ 'Negligible',
+    wau_area > new_layer_summary$r_20 & wau_area <= new_layer_summary$r_40 ~ 'Low',
+    wau_area > new_layer_summary$r_40 & wau_area <= new_layer_summary$r_60 ~ 'Medium',
+    wau_area > new_layer_summary$r_60 & wau_area <= new_layer_summary$r_80 ~ 'High',
+    wau_area > new_layer_summary$r_80 & wau_area <= new_layer_summary$r_max ~ 'VeryHigh'
   ),
-  og_rank_log = case_when(
-    OG_ha == 0 ~ 'None',
-    log_OG >= new_layer_summary_log$r_min & log_OG <= new_layer_summary_log$r_20 ~ 'Negligible',
-    log_OG > new_layer_summary_log$r_20 & log_OG <= new_layer_summary_log$r_40 ~ 'Low',
-    log_OG > new_layer_summary_log$r_40 & log_OG <= new_layer_summary_log$r_60 ~ 'Medium',
-    log_OG > new_layer_summary_log$r_60 & log_OG <= new_layer_summary_log$r_80 ~ 'High',
-    log_OG > new_layer_summary_log$r_80 & log_OG <= new_layer_summary_log$r_max ~ 'VeryHigh'), 
-  og_rank_sqrt = case_when(
-    OG_ha == 0 ~ 'None',
-    sqrt_OG >= new_layer_summary_sqrt$r_min & log_OG <= new_layer_summary_sqrt$r_20 ~ 'Negligible',
-    sqrt_OG > new_layer_summary_sqrt$r_20 & log_OG <= new_layer_summary_sqrt$r_40 ~ 'Low',
-    sqrt_OG > new_layer_summary_sqrt$r_40 & log_OG <= new_layer_summary_sqrt$r_60 ~ 'Medium',
-    sqrt_OG > new_layer_summary_sqrt$r_60 & log_OG <= new_layer_summary_sqrt$r_80 ~ 'High',
-    sqrt_OG > new_layer_summary_sqrt$r_80 & log_OG <= new_layer_summary_sqrt$r_max ~ 'VeryHigh')
+  rank_log = case_when(
+    wau_area == 0 ~ 'None',
+    log_area >= new_layer_summary_log$r_min & log_area <= new_layer_summary_log$r_20 ~ 'Negligible',
+    log_area > new_layer_summary_log$r_20 & log_area <= new_layer_summary_log$r_40 ~ 'Low',
+    log_area > new_layer_summary_log$r_40 & log_area <= new_layer_summary_log$r_60 ~ 'Medium',
+    log_area > new_layer_summary_log$r_60 & log_area <= new_layer_summary_log$r_80 ~ 'High',
+    log_area > new_layer_summary_log$r_80 & log_area <= new_layer_summary_log$r_max ~ 'VeryHigh'), 
+  rank_sqrt = case_when(
+    wau_area == 0 ~ 'None',
+    sqrt_area >= new_layer_summary_sqrt$r_min & sqrt_area <= new_layer_summary_sqrt$r_20 ~ 'Negligible',
+    sqrt_area > new_layer_summary_sqrt$r_20 & sqrt_area <= new_layer_summary_sqrt$r_40 ~ 'Low',
+    sqrt_area > new_layer_summary_sqrt$r_40 & sqrt_area <= new_layer_summary_sqrt$r_60 ~ 'Medium',
+    sqrt_area > new_layer_summary_sqrt$r_60 & sqrt_area <= new_layer_summary_sqrt$r_80 ~ 'High',
+    sqrt_area > new_layer_summary_sqrt$r_80 & sqrt_area <= new_layer_summary_sqrt$r_max ~ 'VeryHigh')
   )
 
 #stargazer(wau_ranking[23:50], title = "Summary - Data Classed by Percentiles")
