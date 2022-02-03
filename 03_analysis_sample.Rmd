@@ -43,7 +43,7 @@ wau_working <- wau_new_layer %>%
   mutate(log_area = ifelse(wau_area>0, log(wau_area), NA)) %>%
   mutate(sqrt_area = ifelse(wau_area>0, sqrt(wau_area), NA)) # for right-skewed data
 
-wau_jenks <- getJenksBreaks(wau_working$wau_area, 6)
+wau_jenks <- getJenksBreaks(wau_working$wau_area, 5)
 
 new_layer_summary <- wau_working %>%
   filter(wau_area > 0) %>%
@@ -86,52 +86,9 @@ new_layer_summary_sqrt<- wau_working %>%
   mutate(transformation = "sqrt")
 
 summary <- bind_rows(new_layer_summary, new_layer_summary_log, new_layer_summary_sqrt)
-```
-
-# Figures
-
-```{r f_own plots, echo=FALSE, warning=FALSE, results='asis'}
-###### hist - raw data
-dist<-ggplot(data=wau_working) +
-  geom_histogram(mapping = aes(x=wau_area), binwidth = 50) +
-  ggtitle("Raw Data (No Transformations Applied)")
-dist
 
 
-
-###### hist - log data
-dist_log<-ggplot(data=wau_working) +
-  geom_histogram(mapping = aes(x=log_area), binwidth = 0.1) +
-  ggtitle("Log Transformed Data") 
-dist_log 
-
-#qq plot - normality test
-log_qq <- ggqqplot(wau_working$log_area) +
-  ggtitle("Normality Test - Log Transformed Data")
-log_qq
-
-ks.test(wau_working$log_area, "pnorm")
-
-
-
-# hist - sqrt data
-dist_sqrt<-ggplot(data=wau_working) +
-  geom_histogram(mapping = aes(x=sqrt_area), binwidth = 5) +
-  ggtitle("Square Root Transformed Data") 
-dist_sqrt
-
-#qq plot - normality test
-sqrt_qq <- ggqqplot(wau_working$sqrt_area) +
-  ggtitle("Normality Test - Square Root Transformed Data")
-sqrt_qq
-
-
-#normality-test - sqrt
-ks.test(wau_working$sqrt_area, "pnorm")
-
-plot(wau_jenks, main = "Old Growth Data - Natural Breaks (Jenks) Transformation")
-
-#Classify based on percentiles
+#Complete binning based upon percentiles of each transformation
 wau_ranking <- wau_working %>%
   mutate(rank = case_when(
     wau_area == 0 ~ 'None',
@@ -154,15 +111,68 @@ wau_ranking <- wau_working %>%
     sqrt_area > new_layer_summary_sqrt$r_20 & sqrt_area <= new_layer_summary_sqrt$r_40 ~ 'Low',
     sqrt_area > new_layer_summary_sqrt$r_40 & sqrt_area <= new_layer_summary_sqrt$r_60 ~ 'Medium',
     sqrt_area > new_layer_summary_sqrt$r_60 & sqrt_area <= new_layer_summary_sqrt$r_80 ~ 'High',
-    sqrt_area > new_layer_summary_sqrt$r_80 & sqrt_area <= new_layer_summary_sqrt$r_max ~ 'VeryHigh')
+    sqrt_area > new_layer_summary_sqrt$r_80 & sqrt_area <= new_layer_summary_sqrt$r_max ~ 'VeryHigh'),
+  rank_jenks = case_when(
+    wau_area <= wau_jenks[1] ~ "Negligible",
+    wau_area > wau_jenks[1] & wau_area <= wau_jenks[2] ~ "Low",
+    wau_area > wau_jenks[2] & wau_area <= wau_jenks[3] ~ "Medium",
+    wau_area > wau_jenks[3] & wau_area <= wau_jenks[4] ~ "High",
+    wau_area > wau_jenks[4] ~ "VeryHigh"
   )
+  )
+
+```
+
+# Exploratory Data Analysis 
+
+```{r f_own plots, echo=FALSE, warning=FALSE, results='asis'}
+
+###### hist - raw data
+dist<-ggplot(data=wau_ranking) +
+  geom_histogram(mapping = aes(x=wau_area, fill = rank), binwidth = 50) +
+  ggtitle("Raw Data (No Transformations Applied)")
+dist
+
+
+###### hist - log data
+dist_log<-ggplot(data=wau_ranking) +
+  geom_histogram(mapping = aes(x=log_area, fill = rank_log), binwidth = 0.1) +
+  ggtitle("Log Transformed Data") 
+dist_log 
+
+#qq plot - normality test
+log_qq <- ggqqplot(wau_ranking$log_area) +
+  ggtitle("Normality Test - Log Transformed Data")
+log_qq
+
+
+
+
+# hist - sqrt data
+dist_sqrt<-ggplot(data=wau_ranking) +
+  geom_histogram(mapping = aes(x=sqrt_area, fill = rank_sqrt), binwidth = 1) +
+  ggtitle("Square Root Transformed Data") 
+dist_sqrt
+
+#qq plot - normality test
+sqrt_qq <- ggqqplot(wau_ranking$sqrt_area) +
+  ggtitle("Normality Test - Square Root Transformed Data")
+sqrt_qq
+
+
+#Classify based on percentiles
+
+dist_ranks<-ggplot(data=wau_ranking) +
+  geom_histogram(mapping = aes(x=wau_area, fill = rank_jenks), binwidth = 5) +
+  ggtitle("Jenks Breaks") 
+dist_ranks
 
 #stargazer(wau_ranking[23:50], title = "Summary - Data Classed by Percentiles")
 
 
 
 
-ggplot(data=wau_ranking, mapping=aes(x=aqua_id, y=OG_ha, color = og_rank))+
-  geom_boxplot() 
+ggplot(data=wau_ranking, mapping=aes(x=log_area, fill = rank))+
+  geom_histogram(binwidth=0.25)
 
 ```
