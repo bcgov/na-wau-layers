@@ -20,15 +20,16 @@ considerations.
     to follow this standard, but users should be aware of the current
     data extent.
 -   Layers should be clean and ready to use prior to inclusion in the
-    WAU Biodiversity Layer.
+    WAU Biodiversity Layer.This repository does not provide cleaning
+    steps for data processing. It is assumed to be done by the user.
 -   There are processing options throughout for vector or raster files.
     It is up to the user to decide what type of file to use.
--   For **area-only metrics** - ***raster*** processing will be faster.
-    The `01_load.R` script ensures the raster is in Hectares BC format
-    prior to processing.
--   For **additional metrics** are required (e.g. species number,
-    species name) - processing should likely be done in ***vector***
-    format.
+    -   For **area-only metrics** - ***raster*** processing will be
+        faster. The `01_load.R` script ensures the raster is in Hectares
+        BC format prior to processing.
+    -   For **additional metrics** are required (e.g. species number,
+        species name) - processing should likely be done in ***vector***
+        format.
 
 ### Processing Steps
 
@@ -56,7 +57,7 @@ scripts that need to be run in order:
 -   `04_vector-metrics.R` - only use with vector inputs
 -   `05_output.R`
 
-There is an optional .rmd script (`04_analysis_sample.Rmd`) that will
+There is an optional .rmd script (`layer-metadata.Rmd`) that will
 produce a metadata file for the layer after is it processed.
 
 ### Getting Help or Reporting an Issue
