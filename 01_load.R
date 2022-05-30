@@ -10,8 +10,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and limitations under the License.
 
-source('header.R')
-source('packages.R')
+source('header.R') #
+source('packages.R') # load required packages
 
 # Load basic watershed file
 
@@ -23,7 +23,7 @@ wau_base <- st_read("data/aqua_sfE.gpkg", crs=3005) %>%
 ##################
 # Options below depending on whether the layer is raster or vector
 
-##### Vector Processing Steps here: use if attribute based metrics are required
+# Vector Processing Steps here: use for attribute based metrics --------
 
 ####   Load new layer, make sure info is correct in header.R
 
@@ -37,46 +37,14 @@ load_data <- function(data){
 
 new_layer <- load_data(layer_file)
 
-
-####   intersect layer with wau
-
-intersect_pa <- function(input1, input2){
-  input1 <- st_make_valid(input1)
-  input2 <- st_make_valid(input2)
-  output <- st_intersection(input1, input2) %>%
-    st_make_valid() %>%
-    st_collection_extract(type = "POLYGON") %>%
-    mutate(polygon_id = seq_len(nrow(.)))
-  output
-}
-
-wau_new_layer <- intersect_pa(wau_base, new_layer)
+#
+saveRDS(new_layer, file = paste0("tmp/", element, '_base-vect'))
 
 
-wau_layer_sum <- wau_new_layer %>%
-  mutate(area = st_area(.),
-         area =as.numeric(set_units(area, ha))) %>%
-  st_set_geometry(NULL) %>%
-  group_by(aqua_id, LOCAL_WATERSHED_CODE, ASSESSMENT_UNIT_GROUP, ASSESSMENT_UNIT_AREA_HA) %>%
-  summarise(wau_area = sum(area)) %>%
-  ungroup()
+# Raster Processing Steps here: use if metrics are area-based only --------
 
 
-# save a copy to bring into analysis rmd
-
-saveRDS(wau_layer_sum, file = paste0("tmp/", element, '_vect'))
-
-
-
-
-
-
-### Extra code here for layers with multiple metrics, other than area-based
-
-
-
-
-##### Raster Processing Steps here: use if metrics are area-based only
+## Convert to ha BC format -------------------------------------------------
 
 # Create a basic raster in hectares BC format
 BCr_file <- file.path(spatialOutDir,"BCr.tif")
@@ -103,14 +71,16 @@ if (!file.exists(BCr_file)) {
   BC <-readRDS(BCr_file)
 }
 
-# convert to raster
+# convert new raster to ha BC format
 new_layer_raster <- fasterize(new_layer, ProvRast, field="raster_value")
 crs(new_layer_raster)<-prov_crs
 
-
-
-saveRDS(new_layer_raster, file = paste0("tmp/", element, '_rast'))
+saveRDS(new_layer_raster, file = paste0("tmp/", element, '_base-rast'))
 
 write_stars(new_layer_raster, dsn=file.path(paste(out_dir, element, '.tif')), overwrite=TRUE)
+
+
+# To do - create option to bring in file already in ha BC format ----------
+
 
 
