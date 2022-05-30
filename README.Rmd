@@ -18,16 +18,42 @@ knitr::opts_chunk$set(
 
 # na-wau-layers
 
-### Usage
+## Usage
 
-Describe data being used (links), and how to run. Eg:
+The na-wau-layers repository processes new B.C. geospatial layers and adds them into the WAU Biodiversity Layer. The process uses the most recent version of the WAU Biodiversity Layer, adds the new information, and re-writes a new version of the WAU Biodiversity Layer. 
 
-There are four core scripts that are required for the analysis, they need to be run in order:
+To process new layers, there are several important steps and considerations. 
 
-- 01_clean.R
-- 02_analysis.R
-- 03_visualize.R
-- 04_output.R
+### Considerations
+
+- The WAU Biodiversity Layer currently considers areas outside of current Parks and Protected Areas and Other Area-Based Conservation Measures (OECMs) current to 2021. New layers do not necessarily need to follow this standard, but users should be aware of the current data extent. 
+- Layers should be clean and ready to use prior to inclusion in the WAU Biodiversity Layer.
+- There are processing options throughout for vector or raster files. It is up to the user to decide what type of file to use. 
+- For **area-only metrics** - _**raster**_ processing will be faster. The `01_load.R` script ensures the raster is in Hectares BC format prior to processing. 
+- For **additional metrics** are required (e.g. species number, species name) - processing should likely be done in _**vector**_ format. 
+
+### Processing Steps
+
+The first step in processing a new layer is to fill in the `header.R` file. An example using old-growth data
+
+#### Header Example
+
+```{r header-example}
+#update with file of interest
+spatialOutDir <- "out/"
+layer_file <- file.path("data/old-growth/Map1_PriorityDeferral_2021_10_24.shp")
+out_dir <- file.path("out/old-growth/")
+dir.create(out_dir)
+element <- 'priority_old_growth'  #underscores only, used as a file name but also column name
+```
+
+After the header script is completed, there are 4 (or 5 for vector) scripts that need to be run in order:
+
+- `01_load.R`
+- `02_intersect_wau.R`
+- `03_binning.R`
+- `04_vector-metrics.R` - only use with vector inputs
+- `05_output.R` 
 
 #### Example
 
