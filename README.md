@@ -33,18 +33,18 @@ considerations.
 ### Processing Steps
 
 The first step in processing a new layer is to fill in the `header.R`
-file. An example using old-growth data
+file. An example is below using old-growth data.
 
 #### Header Example
 
 ``` r
 #update with file of interest
 spatialOutDir <- "out/"
-layer_file <- file.path("data/old-growth/Map1_PriorityDeferral_2021_10_24.shp")
+layer_file <- file.path("data/old-growth/old-growth.shp")
 out_dir <- file.path("out/old-growth/")
-dir.create(out_dir)
+dir.create(out_dir) #creates an output folder
 #> Warning in dir.create(out_dir): 'out\old-growth' already exists
-element <- 'priority_old_growth'  #underscores only, used as a file name but also column name
+element <- 'priority_old_growth'  # use underscores only, used as a file name but also column name
 ```
 
 After the header script is completed, there are 4 (or 5 for vector)
@@ -56,15 +56,8 @@ scripts that need to be run in order:
 -   `04_vector-metrics.R` - only use with vector inputs
 -   `05_output.R`
 
-#### Example
-
-This is a basic example which shows you how to solve a common problem:
-
-``` r
-## basic example code
-```
-
-### Project Status
+There is an optional .rmd script (`04_analysis_sample.Rmd`) that will
+produce a metadata file for the layer after is it processed.
 
 ### Getting Help or Reporting an Issue
 
