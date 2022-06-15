@@ -49,10 +49,10 @@ element <- 'priority_old_growth'  # use underscores only, used as a file name bu
 
 After the header script is completed, there are 4 (or 5 for vector) scripts that need to be run in order:
 
-- `01_load.R`
-- `02_intersect_wau.R`
-- `03_binning.R`
-- `04_vector-metrics.R` - only use with vector inputs
+- `01_load.R` - options for vector or raster
+- `02_intersect_wau.R` - options for vector or raster
+- `03_binning.R` - same for both type of inputs
+- `04_vector-metrics.R` - only use for vector inputs
 - `05_output.R` 
 
 There is an optional .rmd script (`layer-metadata.Rmd`) that will produce a metadata file for the layer after is it processed.  

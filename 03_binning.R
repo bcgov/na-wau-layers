@@ -10,6 +10,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and limitations under the License.
 
+#IN PROGRESS - moving things over to this file from former script
 
 # Code to take area-based metrics and bin them - based on quantiles -------
 

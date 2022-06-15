@@ -10,18 +10,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and limitations under the License.
 
+# Load base information -----------------------------------------------
+
 source('header.R') #
 source('packages.R') # load required packages
 
-# Load basic watershed file
-
+# load wau file
 wau_base <- st_read("data/aqua_sfE.gpkg", crs=3005) %>%
   st_cast(to="POLYGON") %>%
   st_make_valid()
 
 
-##################
+############# DON"T RUN ALL OF THIS CODE - There are 3 options below based on input data and output desired options
+
 # Options below depending on whether the layer is raster or vector
+
+
+
 
 # Vector Processing Steps here: use for attribute based metrics --------
 
@@ -41,10 +46,45 @@ new_layer <- load_data(layer_file)
 saveRDS(new_layer, file = paste0("tmp/", element, '_base-vect'))
 
 
-# Raster Processing Steps here: use if metrics are area-based only --------
 
 
-## Convert to ha BC format -------------------------------------------------
+# Vector to Raster Processing Steps here: use if metrics are area-based only --------
+
+## Create template in Hectares BC format --------------------------
+
+prov_crs <- st_crs(bcmaps::bc_bound_hres(class='sf'))
+
+ProvRast<-raster(nrows=15744, ncols=17216, xmn=159587.5, xmx=1881187.5,
+                 ymn=173787.5, ymx=1748187.5,
+                 crs=prov_crs,
+                 res = c(100,100), vals = 0)
+
+## Rasterise vector --------------------------
+
+new_layer$value <- 1 # user will need to modify based upon data-set
+new_layer_raster <- st_rasterize(new_layer, st_as_stars(ProvRast))
+
+saveRDS(new_layer_raster, file = paste0(out_dir, "/", element, '_base-rast'))
+
+write_stars(new_layer_raster, dsn=file.path(paste0(out_dir, "/", element, '.tif')), overwrite=TRUE)
+
+
+
+
+# Raster Processing Steps here: use if metrics are area-based only ----------
+
+new_layer<-read_stars(layer_file)
+
+new_layer_raster <- st_rasterize(new_layer, st_as_stars(ProvRast))
+
+saveRDS(new_layer_raster, file = paste0(out_dir, "/", element, '_base-rast'))
+
+write_stars(new_layer_raster, dsn=file.path(paste0(out_dir, "/", element, '.tif')), overwrite=TRUE)
+
+# Scrap code from previous work -------------------------------------------
+
+## Do not run - temp keeping in case issues arise --------------------------
+
 
 # Create a basic raster in hectares BC format
 BCr_file <- file.path(spatialOutDir,"BCr.tif")
@@ -56,7 +96,7 @@ if (!file.exists(BCr_file)) {
   ProvRast<-raster(nrows=15744, ncols=17216, xmn=159587.5, xmx=1881187.5,
                    ymn=173787.5, ymx=1748187.5,
                    crs=prov_crs,
-                   res = c(100,100), vals = 1)
+                   res = c(100,100), vals = 0)
   ProvRast_S<-st_as_stars(ProvRast)
   write_stars(ProvRast_S,dsn=file.path(spatialOutDir,'ProvRast_S.tif'))
   BCr <- fasterize(BC,ProvRast)
@@ -68,19 +108,5 @@ if (!file.exists(BCr_file)) {
   BCr <- raster(BCr_file)
   ProvRast<-raster(file.path(spatialOutDir,'ProvRast.tif'))
   BCr_S <- read_stars(file.path(spatialOutDir,'BCr_S.tif'))
-  BC <-readRDS(BCr_file)
+  BC <-readRDS('out/BC.rds')
 }
-
-# convert new raster to ha BC format
-new_layer_raster <- fasterize(new_layer, ProvRast, field="raster_value")
-crs(new_layer_raster)<-prov_crs
-
-saveRDS(new_layer_raster, file = paste0("tmp/", element, '_base-rast'))
-
-write_stars(new_layer_raster, dsn=file.path(paste(out_dir, element, '.tif')), overwrite=TRUE)
-
-
-# To do - create option to bring in file already in ha BC format ----------
-
-
-
