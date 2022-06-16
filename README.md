@@ -9,8 +9,13 @@ adds them into the WAU Biodiversity Layer. The process uses the most
 recent version of the WAU Biodiversity Layer, adds the new information,
 and re-writes a new version of the WAU Biodiversity Layer.
 
-To process new layers, there are several important steps and
-considerations.
+To process new layers, there are **three** options: 1. vector 2. vector
+to raster (rasterize) 3. raster
+
+The option used will depend on the format of the input layer, the
+information you want to include in the WAU Biodiversity Layer, and the
+file size (processing time). Additional considerations are provided
+below.
 
 ### Considerations
 
@@ -23,13 +28,15 @@ considerations.
     WAU Biodiversity Layer.This repository does not provide cleaning
     steps for data processing. It is assumed to be done by the user.
 -   There are processing options throughout for vector or raster files.
-    It is up to the user to decide what type of file to use.
-    -   For **area-only metrics** - ***raster*** processing will be
-        faster. The `01_load.R` script ensures the raster is in Hectares
-        BC format prior to processing.
-    -   For **additional metrics** are required (e.g. species number,
-        species name) - processing should likely be done in ***vector***
-        format.
+    It is up to the user to decide what type of file to use. Options are
+    listed below in the order they are presented in the scripts:
+
+1.  Where **multiple metrics** are required (e.g. species number,
+    species name) - processing should likely be done in ***vector***
+    format.
+2.  For **area-only metrics** - ***raster*** processing will be faster.
+    The `01_load.R` script ensures the raster is in Hectares BC format
+    prior to processing.
 
 ### Processing Steps
 
@@ -51,10 +58,10 @@ element <- 'priority_old_growth'  # use underscores only, used as a file name bu
 After the header script is completed, there are 4 (or 5 for vector)
 scripts that need to be run in order:
 
--   `01_load.R`
--   `02_intersect_wau.R`
--   `03_binning.R`
--   `04_vector-metrics.R` - only use with vector inputs
+-   `01_load.R` - options for vector or raster
+-   `02_intersect_wau.R` - options for vector or raster
+-   `03_binning.R` - same for both type of inputs
+-   `04_vector-metrics.R` - only use for vector inputs
 -   `05_output.R`
 
 There is an optional .rmd script (`layer-metadata.Rmd`) that will
